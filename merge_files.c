@@ -59,6 +59,7 @@ void freeLine(Line *line)
 // Función para imprimir uso del programa por la salida estándar de error
 void imprimir_uso();
 Line leer_linea(int fd, int bufsize);
+void shift_array(int *files, int file_count, int index);
 
 int main(int argc, char **argv)
 {
@@ -92,6 +93,7 @@ int main(int argc, char **argv)
     {
         fprintf(stderr, "Error. Tamaño de buffer incorrecto.\n");
         imprimir_uso();
+        exit(EXIT_FAILURE);
     }
 
     // Redirigir salida estándar a fileout si es necesario
@@ -157,20 +159,26 @@ int main(int argc, char **argv)
     int line_size;
     int index = 0;
 
-    while (1)
+    while (file_count > 0)
     {
-        Line line = leer_linea(fd, bufsize);
+        Line line = leer_linea(files[index], bufsize);
         line_size = getSize(&line);
         if (line_size == 0)
         {
             freeLine(&line);
-            break;
+            shift_array(files, file_count, index);
+            file_count--;
+            index--;
         }
         else
         {
             char *l = getLine(&line);
-            printf("%s", l);
+            write(STDOUT_FILENO, l, line_size);
             freeLine(&line);
+        }
+        if (file_count != 0)
+        {
+            index = (index + 1) % file_count;
         }
     }
     free(files);
@@ -213,4 +221,12 @@ Line leer_linea(int fd, int bufsize)
     }
     free(buf);
     return line;
+}
+
+void shift_array(int *files, int file_count, int index)
+{
+    for (int i = index; i < file_count - 1; i++)
+    {
+        files[i] = files[i + 1];
+    }
 }
