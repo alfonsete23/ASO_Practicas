@@ -82,12 +82,17 @@ int main(int argc, char **argv)
 
     int num_read, resto, status, total = 0, ejecutando = 0, length = 0, ejecutado = 0;
     char *buf = malloc(sizeof(char) * BUF_SIZE);
-    char *line = malloc(sizeof(char) * (LINE_SIZE + BUF_SIZE));
+    char *line = malloc(sizeof(char) * (LINE_SIZE));
     char *end;
 
     while ((num_read = read(STDIN_FILENO, buf, BUF_SIZE)))
     {
         ejecutado = 0;
+        if (total + num_read > LINE_SIZE)
+        {
+            fprintf(stderr, "Error: Tamaño de línea mayor que 128.\n");
+            exit(EXIT_FAILURE);
+        }
         memcpy(line + length, buf, num_read);
         length += num_read;
         total += num_read;

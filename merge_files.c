@@ -11,62 +11,12 @@
 #define MAX_BUFSIZE 134217728
 #define MAX_FILES 16
 
-// Estructura para leer líneas de forma dinámica, con el tamaño de la línea duplicándose cada vez que se lee
-typedef struct
-{
-    char *dir;
-    size_t used;
-    size_t size;
-} Line;
-
-// Inicializar la estructura Line
-void initLine(Line *line, size_t size)
-{
-    line->dir = calloc(sizeof(char), size * sizeof(char));
-    line->used = 0;
-    line->size = size;
-}
-
-// Insertar los "num_read" primeros bytes de buf en la cadena guardada en la estructura Line
-void insertLine(Line *line, char *buf, int num_read)
-{
-    // Si el tamaño tras la adición supera al tamaño reservado, usamos realloc para aumentar el tamaño
-    if ((line->used + num_read) > line->size)
-    {
-        line->size *= 2;
-        line->dir = realloc(line->dir, line->size * sizeof(char));
-    }
-    // Copiamos lo leído en el buffer en la cadena
-    memcpy(line->dir + line->used, buf, num_read);
-    // Actualizar el tamaño de la cadena
-    line->used += num_read;
-}
-
-// Devuelve la cadena almacenada
-char *getLine(Line *line)
-{
-    return line->dir;
-}
-
-// Devuelve el tamaño de la cadena
-size_t getSize(Line *line)
-{
-    return line->used;
-}
-
-// Liberar memoria
-void freeLine(Line *line)
-{
-    free(line->dir);
-    line->used = 0;
-    line->size = 0;
-}
-
 // Prototipos de funciones
 void imprimir_uso();
-Line leer_linea(int fd, int bufsize);
+int leer_linea(int fd, int bufsize, char *buf);
 void shift_array(int *files, int file_count, int index);
 ssize_t writeall(int fd, void *buf, size_t size);
+int find_line(int num_read, char *buf);
 
 int main(int argc, char **argv)
 {
@@ -162,6 +112,8 @@ int main(int argc, char **argv)
         imprimir_uso();
     }
 
+    // Reservar memoria para buffer de lectura
+    char *buf = malloc(sizeof(char) * bufsize);
     // Tamaño de la línea leída
     int line_size;
     // Índice del fichero a leer
@@ -172,35 +124,17 @@ int main(int argc, char **argv)
     // Bucle para leer líneas de ficheros mientras queden ficheros
     while (file_count > 0)
     {
-        // Leer una línea del fichero indicado
-        Line line = leer_linea(files[index], bufsize);
-        // Guardar el tamaño de la línea leída
-        line_size = getSize(&line);
+        // Leer una línea del fichero indicado y escribirla en la salida estándar
+        int line_size = leer_linea(files[index], bufsize, buf);
         // Si el tamaño es 0, es que hemos acabado ese fichero
         if (line_size == 0)
         {
-            // Liberar memoria
-            freeLine(&line);
             // Eliminamos el descriptor del fichero que hemos terminado de leer
             shift_array(files, file_count, index);
             // Decrementamos el número de ficheros
             file_count--;
             // Decrementamos el índice, ya que todos los elementos del array de descriptores a partir del eliminado han pasado una posición hacia atrás
             index--;
-        }
-        else
-        {
-            // Obtenemos la línea leída
-            char *l = getLine(&line);
-            // La escribimos en la salida estándar, que podrá estar o no redirigida TODO: (tenemos que tener en cuenta las escrituras parciales)
-            num_written = writeall(STDOUT_FILENO, l, line_size);
-            if (num_written == -1)
-            {
-                fprintf(stderr, "write()");
-                exit(EXIT_FAILURE);
-            }
-            // Liberar memoria
-            freeLine(&line);
         }
         if (file_count != 0)
         {
@@ -209,6 +143,7 @@ int main(int argc, char **argv)
         }
     }
     // Liberar memoria
+    free(buf);
     free(files);
 }
 
@@ -218,51 +153,33 @@ void imprimir_uso()
 }
 
 // Esta función lee una línea del fichero representado por fd, en bloques de tamaño bufsize
-Line leer_linea(int fd, int bufsize)
+int leer_linea(int fd, int bufsize, char *buf)
 {
-    // Buffer de lectura
-    char *buf;
+    int length = 0;
     // Número de bytes leídos y número de bytes leídos que pertenecen a la línea que estamos leyendo
     int num_read, read_in_line;
-    // Line es una especie de array dinámico que duplica su tamaño cada vez que lo leído supere al tamaño reservado en memoria
-    Line line;
     // Puntero que apunta a la ocurrencia del carácter '\n'
     char *end;
-
-    // Inicializar line con un tamaño igual al doble del tamaño del buffer de lectura
-    initLine(&line, bufsize * 2);
-
-    // Reservar memoria para el buffer de lectura
-    if ((buf = (char *)malloc(bufsize * sizeof(char))) == NULL)
-    {
-        perror("malloc()");
-        exit(EXIT_FAILURE);
-    }
 
     // Leer del fichero hasta encontrar un salto de línea
     while ((num_read = read(fd, buf, bufsize)))
     {
         // Al encontrar un salto de línea
-        if ((end = (strchr(buf, '\n'))) != NULL)
+        if ((read_in_line = (find_line(num_read, buf))) != -1)
         {
             // Actualizar la cantidad de bytes que pertenecen a la línea de lo que hemos leído en el buffer
-            read_in_line = end - buf + 1;
+
             // Hacer que el offset del descriptor de fichero apunte al siguiente carácter tras el salto de línea, para la próxima vez que leamos
             lseek(fd, read_in_line - num_read, SEEK_CUR);
             // Insertamos lo leído en el buffer hasta el salto de línea
-            insertLine(&line, buf, read_in_line);
-            // Liberar memoria del buffer
-            free(buf);
+            length += writeall(STDOUT_FILENO, buf, read_in_line);
             // Devolver line, el proceso principal se encargará de extraer la cadena de caracteres
-            return line;
+            return length;
         }
         // Si no se encuentra salto de línea, simplemente insertamos lo leído en el buffer dentro de la línea
-        insertLine(&line, buf, num_read);
+        length += writeall(STDOUT_FILENO, buf, num_read);
     }
-    // Liberar memoria del buffer
-    free(buf);
-    // Devolver line
-    return line;
+    return length;
 }
 
 // Función para mover los elementos del array a partir de un índice una posición hacia abajo
@@ -286,4 +203,16 @@ ssize_t writeall(int fd, void *buf, size_t size)
     }
 
     return num_written == -1 ? -1 : num_written_total;
+}
+
+int find_line(int num_read, char *buf)
+{
+    for (int i = 0; i < num_read; i++)
+    {
+        if (buf[i] == 0x0a)
+        {
+            return i + 1;
+        }
+    }
+    return -1;
 }
