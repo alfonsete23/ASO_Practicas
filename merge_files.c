@@ -11,8 +11,7 @@
 #define MAX_BUFSIZE 134217728
 #define MAX_FILES 16
 
-
-// Estructura para leer líneas de forma dinámica, con el tamaño de la línea duplicándose cada vez que se lee 
+// Estructura para leer líneas de forma dinámica, con el tamaño de la línea duplicándose cada vez que se lee
 typedef struct
 {
     char *dir;
@@ -28,7 +27,7 @@ void initLine(Line *line, size_t size)
     line->size = size;
 }
 
-// Insertar los "num_read" primeros bytes de buf en la cadena guardada en la estructura Line 
+// Insertar los "num_read" primeros bytes de buf en la cadena guardada en la estructura Line
 void insertLine(Line *line, char *buf, int num_read)
 {
     // Si el tamaño tras la adición supera al tamaño reservado, usamos realloc para aumentar el tamaño
@@ -63,7 +62,6 @@ void freeLine(Line *line)
     line->size = 0;
 }
 
-
 // Prototipos de funciones
 void imprimir_uso();
 Line leer_linea(int fd, int bufsize);
@@ -79,20 +77,20 @@ int main(int argc, char **argv)
     // Lectura de parámetros
     while ((opt = getopt(argc, argv, "t:o:h")) != -1)
     {
-        switch(opt)
+        switch (opt)
         {
-            case 't':
-                bufsize = atoi(optarg);
-                break;
-            case 'o':
-                fileout = optarg;
-                break;
-            case 'h':
-                imprimir_uso();
-                exit(EXIT_SUCCESS);
-            default:
-                imprimir_uso();
-                exit(EXIT_FAILURE);
+        case 't':
+            bufsize = atoi(optarg);
+            break;
+        case 'o':
+            fileout = optarg;
+            break;
+        case 'h':
+            imprimir_uso();
+            exit(EXIT_SUCCESS);
+        default:
+            imprimir_uso();
+            exit(EXIT_FAILURE);
         }
     }
 
@@ -164,7 +162,7 @@ int main(int argc, char **argv)
         imprimir_uso();
     }
 
-    // Tamaño de la línea leída    
+    // Tamaño de la línea leída
     int line_size;
     // Índice del fichero a leer
     int index = 0;
@@ -233,9 +231,9 @@ Line leer_linea(int fd, int bufsize)
 
     // Inicializar line con un tamaño igual al doble del tamaño del buffer de lectura
     initLine(&line, bufsize * 2);
-    
+
     // Reservar memoria para el buffer de lectura
-    if ((buf = (char *) malloc(bufsize * sizeof(char))) == NULL)
+    if ((buf = (char *)malloc(bufsize * sizeof(char))) == NULL)
     {
         perror("malloc()");
         exit(EXIT_FAILURE);
@@ -288,5 +286,4 @@ ssize_t writeall(int fd, void *buf, size_t size)
     }
 
     return num_written == -1 ? -1 : num_written_total;
-
 }
