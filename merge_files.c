@@ -98,7 +98,7 @@ int main(int argc, char **argv)
     // Comprobar que bufsize sea correcto
     if (bufsize < MIN_BUFSIZE || bufsize > MAX_BUFSIZE)
     {
-        fprintf(stderr, "Error. Tamaño de buffer incorrecto.\n");
+        fprintf(stderr, "Error: Tamaño de buffer incorrecto.\n");
         imprimir_uso();
         exit(EXIT_FAILURE);
     }
@@ -122,7 +122,7 @@ int main(int argc, char **argv)
     // Comprobar que hay al menos un fichero de entrada
     if (optind == argc)
     {
-        fprintf(stderr, "Error. No hay ficheros de entrada\n");
+        fprintf(stderr, "Error: No hay ficheros de entrada.\n");
         imprimir_uso();
         exit(EXIT_FAILURE);
     }
@@ -130,7 +130,7 @@ int main(int argc, char **argv)
     // Comprobar que no hay más de 16 ficheros de entrada
     if (argc - optind > 16)
     {
-        fprintf(stderr, "Error. Demasiados ficheros de entrada. Máximo 16 ficheros.\n");
+        fprintf(stderr, "Error: Demasiados ficheros de entrada. Máximo 16 ficheros.\n");
         imprimir_uso();
         exit(EXIT_FAILURE);
     }
@@ -146,7 +146,7 @@ int main(int argc, char **argv)
     {
         if ((fd = open(argv[i], O_RDONLY)) == -1)
         {
-            fprintf(stderr, "El fichero %s no se ha podido abrir\n", argv[i]);
+            fprintf(stderr, "Aviso: No se puede abrir \'%s\': No such file or directory\n", argv[i]);
         }
         else
         {
@@ -158,7 +158,7 @@ int main(int argc, char **argv)
     // Si ningún fichero se ha podido abrir, acabar la ejecución
     if (file_count == 0)
     {
-        fprintf(stderr, "Error. No hay ficheros válidos de entrada\n");
+        fprintf(stderr, "Error: No hay ficheros de entrada.\n");
         imprimir_uso();
     }
 
@@ -214,7 +214,7 @@ int main(int argc, char **argv)
 
 void imprimir_uso()
 {
-    fprintf(stderr, "Uso: ./merge_files [-t BUFSIZE] [-o FILEOUT] FILEIN1 [FILEIN2 ... FILEINn]\nNo admite lectura de la entrada estandar.\n-t BUFSIZE Tamaño de buffer donde 1 <= BUFSIZE <= 128MB\n-o FILEOUT Usa FILEOUT en lugar de la salida estandar\n");
+    fprintf(stderr, "Uso: ./merge_files [-t BUFSIZE] [-o FILEOUT] FILEIN1 [FILEIN2 ... FILEINn]\nNo admite lectura de la entrada estandar.\n-t BUFSIZE\tTamaño de buffer donde 1 <= BUFSIZE <= 128MB\n-o FILEOUT\tUsa FILEOUT en lugar de la salida estandar\n");
 }
 
 // Esta función lee una línea del fichero representado por fd, en bloques de tamaño bufsize
